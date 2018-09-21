@@ -145,8 +145,19 @@ t_denominator_lalonde <- sqrt(asyvar_lalonde * nrow(X_lalonde)^(-1) )
 
 t_stat_lalonde <- t_numerator_lalonde / t_denominator_lalonde
 
+###Make Confidence Interval
+alpha <- .95
+
+lb_lalonde <- beta_hat_lalonde + qnorm((1-alpha)/2,0,1)*t_denominator_lalonde
+ub_lalonde <-  beta_hat_lalonde + qnorm(alpha+(1-alpha)/2,0,1)*t_denominator_lalonde
+
+CI_lalonde <- data.frame(lb_lalonde,ub_lalonde,rep.int(alpha,nrow(beta_hat_lalonde)),beta_hat_lalonde)
+
+
 ####a: Use Built in Function
 beta_0_lalonde <- lm(earn78 ~ treat + black + age + educ + educ2 + earn74 + black_earn74 + u74 + u75, lalonde)
 summary(beta_0_lalonde)
+
+###This Mathces
 
 
