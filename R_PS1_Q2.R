@@ -2,10 +2,13 @@
 #Created by RM on 2018.09.14 for ECON 675 PS 1, Q 2
 #Subpart 4
 
+install.packages("matlib")
+
 #load package
 library(MASS)
 library(plyr)
 library(data.table)
+library(matlib)
 
 
 ########
@@ -31,8 +34,9 @@ W <-  diag(x=1, 1000, 1000)
 #####i: Symmetric Inverse
 
 ####i)a:Estimate Beta and Variance
-X_W_X_inv <- ginv(t(X) %*% W  %*% X)
-beta_hat <- X_W_X_inv %*% ( t(X)  %*% W  %*% y)
+forinv <- diag(x=1,ncol(X),ncol(X))
+XWX_inv <- solve(t(X) %*% W  %*% X,forinv)
+beta_hat <- XWX_inv %*% ( t(X)  %*% W  %*% y)
 
 h_0_hat <- nrow(X)^(-1) * (t(X) %*% X)
 epsilon_hat <- (y - X %*% beta_hat)
@@ -41,7 +45,8 @@ X_esp <- cbind(x_1_epsilon,x_2)
 #Note: not squaring since will be squared in matrix multiplication
 v_0_hat <- nrow(X)^(-1) * (t(X_esp) %*% X_esp)
 
-V_hat <- ginv(h_0_hat) %*% v_0_hat %*% ginv(h_0_hat)
+h_0_hat_inv <- solve(h_0_hat,diag(x=1,ncol(X)))
+V_hat <- h_0_hat_inv %*% v_0_hat %*% h_0_hat_inv
 
 
 ####i)b: T-test by element of beta
@@ -66,9 +71,9 @@ CI <- data.frame(lb,ub,alpha,beta_hat,beta)
 #####ii: Choleskey Inverse
 
 ####ii)a:Estimate Beta and Variance with Cholesky
-X_W_X_chol <- chol(t(X) %*% W  %*% X)
-X_W_X_cholinv <- chol2inv(X_W_X_chol)
-beta_hat_chol <- X_W_X_cholinv %*% ( t(X)  %*% W  %*% y)
+XWX_chol <- chol(t(X) %*% W  %*% X)
+XWX_cholinv <- chol2inv(XWX_chol)
+beta_hat_chol <- XWX_cholinv %*% ( t(X)  %*% W  %*% y)
 
 h_0_hat <- nrow(X)^(-1) * (t(X) %*% X)
 epsilon_hat_chol <- (y - X %*% beta_hat_chol)
@@ -77,7 +82,8 @@ X_esp_chol <- cbind(x_1_epsilon_chol,x_2)
 #Note: not squaring since will be squared in matrix multiplication
 v_0_hat_chol <- nrow(X)^(-1) * (t(X_esp_chol) %*% X_esp_chol)
 
-V_hat_chol <- ginv(h_0_hat) %*% v_0_hat_chol %*% ginv(h_0_hat)
+h_0_hat_chol_inv <- chol(h_0_hat)
+V_hat_chol <- chol2inv(h_0_hat_chol_inv) %*% v_0_hat_chol %*% ginv(h_0_hat_chol_inv)
 
 
 ####ii)b: T-test by element of beta with Cholesky
@@ -116,15 +122,15 @@ lalonde$intercept <- rep.int(1,nrow(lalonde))
 
 x_vars <- c("intercept","treat","black","age","educ","educ2","earn74","black_earn74","u74","u75")
 X_lalonde <- as.matrix(subset(lalonde,select=x_vars))
-#X_lalonde <- ta(lalonde$treat,lalonde$black,lalonde$age,)
 W_lalonde <-  diag(x=1, nrow(X_lalonde), nrow(X_lalonde))
-XWX_inv_lalonde <- ginv(t(X_lalonde) %*% W_lalonde  %*% X_lalonde)
+forinv_lalone <- diag(x=1,ncol(X_lalonde),ncol(X_lalonde))
+XWX_inv_lalonde <- solve(t(X_lalonde) %*% W_lalonde  %*% X_lalonde,forinv_lalone)
 beta_hat_lalonde <- XWX_inv_lalonde %*% ( t(X_lalonde)  %*% W_lalonde  %*% lalonde$earn78)
-#test <- ginv(t(X_lalonde) %*% X_lalonde) %*% ( t(X_lalonde) %*% lalonde$earn78)
 
 h_0_hat_lalonde <- nrow(X_lalonde)^(-1) * (t(X_lalonde) %*% X_lalonde)
 epsilon_hat_lalonde <- (lalonde$earn78 - X_lalonde %*% beta_hat_lalonde)
 X_lalonde_table <- data.table(X_lalonde)
+
 X_lalonde_table$age <- epsilon_hat_lalonde * X_lalonde_table$age
 #X_esp <- cbind(x_1_epsilon,x_2)
 #Note: not squaring since will be squared in matrix multiplication
