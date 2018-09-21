@@ -47,10 +47,8 @@ beta_hat <- XWX_inv %*% ( t(X)  %*% W  %*% y)
 
 h_0_hat <- nrow(X)^(-1) * (t(X) %*% X)
 epsilon_hat <- (y - X %*% beta_hat)
-x_1_epsilon <- epsilon_hat * x_1
-X_eps <- cbind(intercept,x_1_epsilon,x_2)
-#Note: not squaring since will be squared in matrix multiplication
-v_0_hat <- nrow(X)^(-1) * (t(X_eps) %*% X_eps)
+s2 <- (nrow(X)-nrow(beta_hat))^(-1)*(t(epsilon_hat) %*% epsilon_hat)
+v_0_hat <- (as.integer(s2)* nrow(X)^(-1)) * (t(X) %*% X)
 
 h_0_hat_inv <- solve(h_0_hat,diag(x=1,ncol(X)))
 V_hat <- h_0_hat_inv %*% v_0_hat %*% h_0_hat_inv
