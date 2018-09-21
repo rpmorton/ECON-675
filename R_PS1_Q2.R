@@ -83,7 +83,7 @@ X_esp_chol <- cbind(x_1_epsilon_chol,x_2)
 v_0_hat_chol <- nrow(X)^(-1) * (t(X_esp_chol) %*% X_esp_chol)
 
 h_0_hat_chol_inv <- chol(h_0_hat)
-V_hat_chol <- chol2inv(h_0_hat_chol_inv) %*% v_0_hat_chol %*% ginv(h_0_hat_chol_inv)
+V_hat_chol <- chol2inv(h_0_hat_chol_inv) %*% v_0_hat_chol %*% chol2inv(h_0_hat_chol_inv)
 
 
 ####ii)b: T-test by element of beta with Cholesky
