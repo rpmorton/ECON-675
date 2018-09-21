@@ -1,4 +1,9 @@
 
+reg_data <- cbind(y,subset(as.data.frame(X),select = c("V2","V3")))
+
+test_beta <- lm(y ~ V2 + V3, reg_data)
+summary(test_beta)
+
 #Created by RM on 2018.09.14 for ECON 675 PS 1, Q 2
 #Subpart 4
 
@@ -14,21 +19,23 @@ library(matlib)
 ########
 ######Q2, Part 4: Implementation of OLS
 #######
+rm(list=ls())
 
 ######Generate Data
+nobs <- 1000
+x_1 <- runif(nobs,0,100)
+x_2 <- runif(nobs,min=30,max=50)
+intercept <- rep.int(1,nobs)
+x_1_2 <- c(intercept,x_1,x_2)
+X <- matrix(x_1_2, nrow = nobs, ncol = 3)
 
-x_1 <- runif(1000,0,100)
-x_2 <- runif(1000,min=30,max=50)
-x_1_2 <- c(x_1,x_2)
-X <- matrix(x_1_2, nrow = 1000, ncol = 2)
+epsilon <- rnorm(nobs, mean=0, sd=10)
 
-epsilon <- rnorm(1000, mean=0, sd=10)
-
-beta <- matrix( c(1,5), nrow = 2, ncol = 1)
+beta <- matrix( c(0,1,5), nrow = 3, ncol = 1)
 
 y <- X %*% beta + epsilon
 
-W <-  diag(x=1, 1000, 1000)
+W <-  diag(x=1, nobs, nobs)
 
 
 #####i: Symmetric Inverse
@@ -41,16 +48,16 @@ beta_hat <- XWX_inv %*% ( t(X)  %*% W  %*% y)
 h_0_hat <- nrow(X)^(-1) * (t(X) %*% X)
 epsilon_hat <- (y - X %*% beta_hat)
 x_1_epsilon <- epsilon_hat * x_1
-X_esp <- cbind(x_1_epsilon,x_2)
+X_eps <- cbind(intercept,x_1_epsilon,x_2)
 #Note: not squaring since will be squared in matrix multiplication
-v_0_hat <- nrow(X)^(-1) * (t(X_esp) %*% X_esp)
+v_0_hat <- nrow(X)^(-1) * (t(X_eps) %*% X_eps)
 
 h_0_hat_inv <- solve(h_0_hat,diag(x=1,ncol(X)))
 V_hat <- h_0_hat_inv %*% v_0_hat %*% h_0_hat_inv
 
 
-####i)b: T-test by element of beta
-t_numerator <- beta_hat - beta
+####i)b: T-test by element of beta against H_0 of 0
+t_numerator <- beta_hat - rep.int(0,nrow(beta_hat))
 asyvar <- diag(V_hat)
 t_denominator <- sqrt(asyvar * nrow(X)^(-1) )
 
@@ -78,9 +85,9 @@ beta_hat_chol <- XWX_cholinv %*% ( t(X)  %*% W  %*% y)
 h_0_hat <- nrow(X)^(-1) * (t(X) %*% X)
 epsilon_hat_chol <- (y - X %*% beta_hat_chol)
 x_1_epsilon_chol <- epsilon_hat_chol * x_1
-X_esp_chol <- cbind(x_1_epsilon_chol,x_2)
+X_eps_chol <- cbind(intercept,x_1_epsilon_chol,x_2)
 #Note: not squaring since will be squared in matrix multiplication
-v_0_hat_chol <- nrow(X)^(-1) * (t(X_esp_chol) %*% X_esp_chol)
+v_0_hat_chol <- nrow(X)^(-1) * (t(X_eps_chol) %*% X_eps_chol)
 
 h_0_hat_chol_inv <- chol(h_0_hat)
 V_hat_chol <- chol2inv(h_0_hat_chol_inv) %*% v_0_hat_chol %*% chol2inv(h_0_hat_chol_inv)
@@ -112,7 +119,10 @@ CI_chol <- data.frame(lb_chol,ub_chol,alpha,beta_hat_chol,beta)
 ######Q2, Part 5: Lalonde Data
 ######
 
-####a: Use Estimator Above
+#####a: Use Estimator Coded Above
+
+###Estimate Beta and Variance Matrix
+rm(list=ls())
 
 lalonde <- read.csv("/Users/russellmorton/Desktop/Coursework/Fall 2018/Econ 675/Problem Sets/Problem Set Data/LaLonde_1986.csv")
  
@@ -123,8 +133,8 @@ lalonde$intercept <- rep.int(1,nrow(lalonde))
 x_vars <- c("intercept","treat","black","age","educ","educ2","earn74","black_earn74","u74","u75")
 X_lalonde <- as.matrix(subset(lalonde,select=x_vars))
 W_lalonde <-  diag(x=1, nrow(X_lalonde), nrow(X_lalonde))
-forinv_lalone <- diag(x=1,ncol(X_lalonde),ncol(X_lalonde))
-XWX_inv_lalonde <- solve(t(X_lalonde) %*% W_lalonde  %*% X_lalonde,forinv_lalone)
+forinv_lalonde <- diag(x=1,ncol(X_lalonde),ncol(X_lalonde))
+XWX_inv_lalonde <- solve(t(X_lalonde) %*% W_lalonde  %*% X_lalonde,forinv_lalonde)
 beta_hat_lalonde <- XWX_inv_lalonde %*% ( t(X_lalonde)  %*% W_lalonde  %*% lalonde$earn78)
 
 h_0_hat_lalonde <- nrow(X_lalonde)^(-1) * (t(X_lalonde) %*% X_lalonde)
@@ -132,16 +142,22 @@ epsilon_hat_lalonde <- (lalonde$earn78 - X_lalonde %*% beta_hat_lalonde)
 X_lalonde_table <- data.table(X_lalonde)
 
 X_lalonde_table$age <- epsilon_hat_lalonde * X_lalonde_table$age
-#X_esp <- cbind(x_1_epsilon,x_2)
 #Note: not squaring since will be squared in matrix multiplication
-v_0_hat <- nrow(X)^(-1) * (t(X_esp) %*% X_esp)
+v_0_hat_lalonde <- nrow(X_lalonde_table)^(-1) * (t(as.matrix(X_lalonde_table)) %*% as.matrix(X_lalonde_table))
 
-V_hat <- ginv(h_0_hat) %*% v_0_hat %*% ginv(h_0_hat)
+forinv_lalonde_h <- diag(1,nrow(t(X_lalonde) %*% X_lalonde),nrow(t(X_lalonde) %*% X_lalonde))
+V_hat_lalonde <- solve((t(X_lalonde) %*% X_lalonde),forinv_lalonde_h) %*% v_0_hat_lalonde %*% solve((t(X_lalonde) %*% X_lalonde),forinv_lalonde_h)
+
+##Find t-stat, p-value and CI (alpha = .95) against null of zero
+t_numerator_lalonde <- beta_hat_lalonde - rep.int(0,nrow(beta_hat_lalonde))
+asyvar_lalonde <- diag(V_hat_lalonde)
+t_denominator_lalonde <- sqrt(asyvar_lalonde * nrow(X_lalonde)^(-1) )
+
+t_stat_lalonde <- t_numerator_lalonde / t_denominator_lalonde
 
 
-
+####a: Use Built in Function
 beta_0_lalonde <- lm(earn78 ~ treat + black + age + educ + educ2 + earn74 + black_earn74 + u74 + u75, lalonde)
-
 summary(beta_0_lalonde)
 
 
