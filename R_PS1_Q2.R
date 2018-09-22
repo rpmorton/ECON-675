@@ -1,9 +1,3 @@
-
-reg_data <- cbind(y,subset(as.data.frame(X),select = c("V2","V3")))
-
-test_beta <- lm(y ~ V2 + V3, reg_data)
-summary(test_beta)
-
 #Created by RM on 2018.09.14 for ECON 675 PS 1, Q 2
 #Subpart 4
 
@@ -158,6 +152,8 @@ CI_lalonde <- data.frame(lb_lalonde,ub_lalonde,rep.int(alpha,nrow(beta_hat_lalon
 beta_0_lalonde <- lm(earn78 ~ treat + black + age + educ + educ2 + earn74 + black_earn74 + u74 + u75, lalonde)
 summary(beta_0_lalonde)
 
-###This Mathces
+###The Diffeent Estimates All Match
+
+
 
 
