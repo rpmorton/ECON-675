@@ -16,14 +16,14 @@ lalonde_control <- subset(lalonde, treat < 1)
 diff_means <- function(x = NULL, y = NULL) {
   mean_earn78 <- mean(y)
   pre_nobs_data <- nrow(as.data.frame(y))
-  numobs <<- as.integer(pre_nobs_data)
+  numobs <- as.integer(pre_nobs_data)
   
   deviations <- y - mean_earn78
   deviation_data <- data.frame(deviations)
   deviation_matrix <- as.matrix(deviation_data)
   sum_squared_devs <- t(deviation_matrix) %*% deviation_matrix 
-  pre_s2 <<- sum_squared_devs[1,1]
-  s2 <<- pre_s2 * (1/(numobs-1))
+  pre_s2 <- sum_squared_devs[1,1]
+  s2 <- pre_s2 * (1/(numobs-1))
  
   out_list <- list() 
   out_list[["nobs"]] <- numobs
