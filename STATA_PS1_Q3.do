@@ -9,7 +9,7 @@ set more off
 
 import delim "$data/LaLonde_1986", delim(",")
 
-*Question 1b
+*Question 3:1b
 g ones = 1
 
 bys treat: egen count_by_treat = sum(ones)
@@ -40,14 +40,23 @@ forv i = 0(1)1 {
 g treat_dm = mean_treat_1 - mean_treat_0
 g conserv_var = (s2_treat_1/count_treat_1) + (s2_treat_0/count_treat_0)
 
-g df = 100 * ((count_treat_1 + count_treat_0) - 4)
+*g df = 100 * ((count_treat_1 + count_treat_0) - 4)
+g df = (count_treat_1 + count_treat_0) - 2
+
 
 local alpha = .95
 g lb_treat_lalonde = treat_dm + invttail(df,`alpha'+(1-`alpha')/2)*sqrt(conserv_var)
 g ub_treat_lalonde =  treat_dm + invttail(df,(1-`alpha')/2)*sqrt(conserv_var)
 
+local lb = lb_treat_lalonde
+local ub = ub_treat_lalonde
 
-***Question 2a
+di "the CI is `lb' to `ub'"
+ttest earn78, by(treat)
+
+/************
+***Question 3:2a
+***********/
 
 clear
 set more off
@@ -352,10 +361,73 @@ save "$data/fisher ks results", replace
 
 
 
+/************
+***Question 3:3a
+***********/
+
+*Power Fct Using Size of .05 
 
 
+clear
+set more off
+
+global size = .05
+
+import delim "$data/LaLonde_1986", delim(",")
+
+*Question 3:1b
+g ones = 1
+
+bys treat: egen count_by_treat = sum(ones)
+bys treat: egen mean_earn78_by_treat = mean(earn78)
+
+g dev_from_mean_by_treat = (earn78 - mean_earn78_by_treat) *  (earn78 - mean_earn78_by_treat)
+
+bys treat: egen sum_dev_from_mean_by_treat =  sum(dev_from_mean_by_treat)
+g s2_by_treat = (1/(count_by_treat-1)) * sum_dev_from_mean_by_treat
+
+forv i = 0(1)1 {
+
+	egen pre_s2_treat_`i' = max(s2_by_treat) if treat == `i'
+	egen s2_treat_`i' = max(pre_s2_treat_`i')
+	drop pre_s2_treat_`i'
+	
+	egen pre_mean_treat_`i' = max(mean_earn78_by_treat) if treat == `i'
+	egen mean_treat_`i' = max(pre_mean_treat_`i')
+	drop pre_mean_treat_`i'
+	
+	egen pre_count_treat_`i' = max(count_by_treat) if treat == `i'
+	egen count_treat_`i' = max(pre_count_treat_`i')
+	drop pre_count_treat_`i'	
+	
+}
+
+g treat_dm = mean_treat_1 - mean_treat_0
+g conserv_var = (s2_treat_1/count_treat_1) + (s2_treat_0/count_treat_0)
+
+g df =  (count_treat_1 + count_treat_0) - 2
 
 
+*global t_hat = treat_dm
+global conserv_se = sqrt(conserv_var)
+global df = df
+
+clear
+
+set obs 4001
+g obs = [_n]
+g tau_power = obs - 1 - 2000
+
+g t_input_lt_tau = -(tau_power / $conserv_se) - invttail($df,1 - ($size/2))
+g t_prob_lt_tau = ttail($df,t_input_lt_tau)
+g t_input_gt_tau = -(tau_power / $conserv_se) + invttail($df,1 - ($size/2))
+g t_prob_gt_tau = ttail($df,t_input_gt_tau)
+g power_tau = t_prob_lt_tau + 1 - t_prob_gt_tau
+*g power_tau = 1 + ttail(-(tau_power / $conserv_se) - invttail($df,1 - (`size'/2))),$df)
+g size = $size
+
+
+twoway (scatter power_tau tau_power, msize(tiny) xtitle("{&tau}") ytitle("{&beta}({&tau})") title("Power Function against H{sub:0}: {&tau} = 0") note("Power function for df = $df with size = $size") yline($size) )
 
 
 
