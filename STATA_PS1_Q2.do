@@ -25,7 +25,7 @@ g epsilon = rnormal() * 10
 
 g y = x_1 * `beta1' + x_2 * `beta2' + epsilon
 
-**ia: symmetric point estimate of beta
+**4a: symmetric point estimate of beta
 *bring data into mata and estimate
 
 mata: mata clear
@@ -62,13 +62,7 @@ mata:
 
 end
 
-*matrix list betahat
-*matrix list denominator
-*matrix list tstats
-*matrix list s2
-*matrix list v0
-*matrix list h0inv
-*matrix list asyvar
+**4a: now use choleksy inverse
 
 
 ** Now compute the pvalues and confidence intervals
@@ -93,8 +87,78 @@ forv i = 1(1)`cols' {
 }
 
 
+**4a: now use choleksy inverse
 
+mata: mata clear
+capture eret clear
+
+mata:
+	
+	X = st_data(.,("intercept", "x_1", "x_2"))
+	y = st_data(.,("y"))
+	Xrows = rows(X)
+	Xcols = cols(X)
+
+	betahat_chol = cholinv(X' * X) * (X' * y)
+		
+	epsilonhat_chol = y - X * betahat_chol
+	s2_chol = epsilonhat_chol' * epsilonhat_chol :* (1/(Xrows-Xcols))
+	v0_hat_chol = s2_chol * X' * X :* (1/Xrows)
+	
+	h0inv_chol = cholinv(X'* X :* (1/Xrows))
+		
+	AsyVar_chol = h0inv_chol * v0_hat_chol * h0inv_chol
+	denominator_chol = sqrt(diagonal(AsyVar_chol) * (1/Xrows) )
+	t_stats_chol = betahat_chol :/ denominator_chol
+	
+	st_matrix("betahatchol", betahat_chol)
+	st_matrix("denominatorchol", denominator_chol)
+	st_matrix("tstatschol", t_stats_chol)
+	st_matrix("s2chol",s2_chol)
+	st_matrix("v0chol",v0_hat_chol)
+	st_matrix("h0invchol",h0inv_chol)
+	st_matrix("asyvarchol",AsyVar_chol)
+
+end
+
+**4a: now use choleksy inverse
+
+
+** Now compute the pvalues and confidence intervals
+
+forv i = 1(1)`cols' {
+
+	local j = `i' - 1
+	g beta_hat_chol_`j' = betahatchol[`i',1]
+	g t_stat_beta_chol_`j' = tstatschol[`i',1]
+	g pval_beta_chol_`j' =  2*ttail(df,t_stat_beta_chol_`j')
+	g lb_beta_chol_`j' = beta_hat_chol_`j' + invttail(df,`alpha'+(1-`alpha')/2)*denominatorchol[`i',1]
+	g ub_beta_chol_`j' =  beta_hat_chol_`j' + invttail(df,(1-`alpha')/2)*denominatorchol[`i',1]
+
+}
+
+**Compare Symmetric and Cholesky Inverse
+
+local compare = "lb_beta ub_beta"
+
+di "cols is `cols'"
+	
+foreach cibound of local compare {	
+	
+	forv i = 1(1)`cols' {
+	local k = `i' - 1
+	
+		g diff_`cibound'_`k' = round(`cibound'_`k',.00001) - round(`cibound'_chol_`k',.00001)
+		su diff_`cibound'_`k'
+		
+	}
+
+}
+
+
+/**************
 /* PS 2 Q 5 */
+**************/
 
 clear
 

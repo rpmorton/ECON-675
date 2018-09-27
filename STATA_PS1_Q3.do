@@ -1,3 +1,6 @@
+ksmirnov earn78, by(treat)
+g test = r(D)
+
 ***Created by RM on 2018.09.33
 ***For ECON 675, PS 1, Q 3
 *********************
@@ -362,7 +365,7 @@ save "$data/fisher ks results", replace
 
 
 /************
-***Question 3:3a
+***Question 3
 ***********/
 
 *Power Fct Using Size of .05 
@@ -375,7 +378,7 @@ global size = .05
 
 import delim "$data/LaLonde_1986", delim(",")
 
-*Question 3:1b
+*Question 3:3a
 g ones = 1
 
 bys treat: egen count_by_treat = sum(ones)
@@ -431,6 +434,32 @@ twoway (scatter power_tau tau_power, msize(tiny) xtitle("{&tau}") ytitle("{&beta
 
 
 
+*Question 3:3b
+clear
+set more off
+
+set obs 1
+g obs = 1
+g tildet = 0
+
+local on = 1
+local tildet = 0
+
+while `on' > 0 {
+
+	capture drop power on_update
+	g power =  normal(-1.96 - `tildet' ) - normal(1.96 - `tildet')
+	g on_update = power >= -.2
+	local on = on_update
+	
+	replace tildet = `tildet'
+	
+	if `on' > 0 {
+		local tildet = `tildet' + .01
+	}
+	
+}
+	
 
 
 
