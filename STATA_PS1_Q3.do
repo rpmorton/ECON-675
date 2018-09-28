@@ -46,7 +46,6 @@ g conserv_var = (s2_treat_1/count_treat_1) + (s2_treat_0/count_treat_0)
 *g df = 100 * ((count_treat_1 + count_treat_0) - 4)
 g df = (count_treat_1 + count_treat_0) - 2
 
-
 local alpha = .95
 g lb_treat_lalonde = treat_dm + invttail(df,`alpha'+(1-`alpha')/2)*sqrt(conserv_var)
 g ub_treat_lalonde =  treat_dm + invttail(df,(1-`alpha')/2)*sqrt(conserv_var)
@@ -211,37 +210,9 @@ forv i = 1(1)`loops' {
 	drop mean_effect_`i' pre_control_`i' control_`i' pre_treatment_`i' treatment_`i'
 	
 	*ks test
-	levelsof(earn78), l(outcomes)
-	
-	g emp_cdf_control_`i' = 0
-	g emp_cdf_treat_`i' = 0
-	g cdf_diff_`i' = .
-
-	
-	foreach outcome of local outcomes {
-	
-		g out = `outcome'
-		g lt_outcome = earn78 <= `outcome'
+	ksmirnov earn78, by(fihser`i')
 		
-		bys fisher`i': egen count_lt_outcome = sum(lt_outcome) 
-		bys fisher`i': egen count_by_fisher = count(lt_outcome)
-		
-		g pre_pre_emp_cdf_control_`i' = count_lt_outcome / count_by_fisher if fisher`i' == 0
-		egen pre_emp_cdf_control_`i' = max(pre_pre_emp_cdf_control_`i')
-		replace emp_cdf_control_`i' = pre_emp_cdf_control_`i' if earn78 == `outcome'
-		
-		g pre_pre_emp_cdf_treat_`i' = count_lt_outcome / count_by_fisher if fisher`i' == 1
-		egen pre_emp_cdf_treat_`i' = max(pre_pre_emp_cdf_treat_`i')
-		replace emp_cdf_treat_`i' = pre_emp_cdf_treat_`i' if earn78 == `outcome'	
-		
-		replace cdf_diff_`i' = abs(emp_cdf_treat_`i' - emp_cdf_control_`i') if earn78 == `outcome'	
-		
-		drop out lt_outcome count_lt_outcome count_by_fisher pre_pre_emp_cdf_control_`i' pre_pre_emp_cdf_treat_`i' 
-		drop pre_emp_cdf_control_`i' pre_emp_cdf_treat_`i' 
-	
-		}
-		
-	egen ks_stat_`i' = max(cdf_diff_`i')
+	g ks_stat_`i' = r(D)
 
 }
 
@@ -443,19 +414,45 @@ g obs = 1
 g tildet = 0
 
 local on = 1
-local tildet = 0
+local tildet = 10
 
 while `on' > 0 {
 
 	capture drop power on_update
-	g power =  normal(-1.96 - `tildet' ) - normal(1.96 - `tildet')
-	g on_update = power >= -.2
+	g power =  normal(-1.96 - `tildet' ) - normal(1.96 - `tildet') + 1
+	g on_update = power >= .8
 	local on = on_update
 	
 	replace tildet = `tildet'
 	
 	if `on' > 0 {
-		local tildet = `tildet' + .01
+		local tildet = `tildet' - .01
+	}
+	
+}
+
+/* Re Do with smaller step size */
+	
+clear	
+	
+set obs 1
+g obs = 1
+g tildet = 0
+
+local on = 1
+local tildet = 3
+
+while `on' > 0 {
+
+	capture drop power on_update
+	g power =  normal(-1.96 - `tildet' ) - normal(1.96 - `tildet') + 1
+	g on_update = power >= .8
+	local on = on_update
+	
+	replace tildet = `tildet'
+	
+	if `on' > 0 {
+		local tildet = `tildet' - .001
 	}
 	
 }

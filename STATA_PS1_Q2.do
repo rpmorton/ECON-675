@@ -160,6 +160,8 @@ foreach cibound of local compare {
 /* PS 2 Q 5 */
 **************/
 
+**Q2: 5a
+
 clear
 
 import delim "$data/LaLonde_1986", delim(",")
@@ -221,10 +223,9 @@ forv i = 1(1)`cols' {
 	g pval_beta_`j' =  2*ttail(df,abs(t_stat_beta_`j'))
 	g lb_beta_`j' = beta_hat_`j' + invttail(df,`alpha'+(1-`alpha')/2)*denominator[`i',1]
 	g ub_beta_`j' =  beta_hat_`j' + invttail(df,(1-`alpha')/2)*denominator[`i',1]
+	g se_beta_`j' = denominator[`i',1]
 
 }
-
-reg earn78 treat black age educ educ2 earn74 black_earn74 u74 u75
 
 local colsminus = `cols' - 1
 
@@ -235,6 +236,7 @@ forv i = 1(1)`colsminus' {
 	local pval = pval_beta_`j'
 	local lb = lb_beta_`j'
 	local ub = ub_beta_`j'
+	local tstat = t_stat_beta_`j' 
 	
 	di "beta is `betahat'; pval is `pval', lb is `lb', ub is `ub'"
 }
@@ -243,4 +245,73 @@ forv i = 1(1)`colsminus' {
 	local pval = pval_beta_0
 	local lb = lb_beta_0
 	local ub = ub_beta_0
+	local tstat = t_stat_beta_0
 	di "beta is `betahat'; pval is `pval', lb is `lb', ub is `ub'"
+	
+
+local indepvars "intercept treat black age educ educ2 earn74 black_earn74 u74 u75"
+
+**Q2: 5b
+
+g independentvars = "`indepvars'"
+
+g independentvars_split = independentvars
+
+split independentvars_split, g(indep)
+
+reg earn78 `indepvars', nocons
+g df_reg = e(df_r) 
+
+forv i = 1(1)`colsminus' {
+	local j = `i' - 1 
+	local varrel = indep`i'
+	g beta_hat_reg_`j' = _b[`varrel']
+	g se_beta_reg_`j' = _se[`varrel'] 
+	g t_stat_beta_reg_`j' = beta_hat_reg_`j' / se_beta_reg_`j'
+	g pval_reg_`j' =  2*ttail(df_reg,abs(t_stat_beta_reg_`j'))
+	g lb_beta_reg_`j' = beta_hat_reg_`j' + invttail(df,`alpha'+(1-`alpha')/2)*se_beta_reg_`j' 
+	g ub_beta_reg_`j' =  beta_hat_reg_`j' + invttail(df,(1-`alpha')/2)*se_beta_reg_`j' 
+	
+}
+
+g obscounter = [_n]
+
+
+g var1 = indep1 if obscounter == 1
+g beta_hat_export = .
+g beta_hat_reg_export = .
+g se_export = .
+g se_reg_export = .
+g t_stat_export = .
+g t_stat_reg_export = .
+g pval_export = .
+g pval_reg_export = .
+g lb_export = .
+g lb_reg_export = .
+g ub_export = .
+g ub_reg_export = .
+
+forv i = 1(1)`colsminus' {
+	
+	local j = `i' - 1 
+	replace var = indep`i' if obscounter == `i'
+	replace beta_hat_export = beta_hat_`j' if obscounter == `i'
+	replace beta_hat_reg_export = beta_hat_reg_`j' if obscounter == `i'
+	replace se_export = se_beta_`j' if obscounter == `i'
+	replace se_reg_export = se_beta_reg_`j' if obscounter == `i'
+	replace t_stat_export = t_stat_beta_`j' if obscounter == `i'
+	replace t_stat_reg_export = t_stat_beta_reg_`j' if obscounter == `i'
+	replace pval_export = pval_beta_`j' if obscounter == `i'
+	replace pval_reg_export = pval_reg_`j' if obscounter == `i'
+	replace lb_export = lb_beta_`j' if obscounter == `i'
+	replace lb_reg_export = lb_beta_reg_`j' if obscounter == `i'
+	replace ub_export = ub_beta_`j' if obscounter == `i'
+	replace ub_reg_export = ub_beta_reg_`j' if obscounter == `i'
+		
+}
+
+keep var *export
+
+
+
+
