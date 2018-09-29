@@ -6,7 +6,7 @@ library(MASS)
 library(plyr)
 library(data.table)
 library(matlib)
-
+library(xtable)
 
 ########
 ######Q2, Part 4: Implementation of OLS
@@ -58,8 +58,8 @@ pval <- 2*pt(-abs(t_stat),df=nrow(X)-nrow(beta_hat))
 ####i)d: Confidence Interal
 alpha <- .90
 
-lb <- beta_hat + qnorm((1-alpha)/2,0,1)*t_denominator
-ub <-  beta_hat + qnorm(alpha+(1-alpha)/2,0,1)*t_denominator
+lb <- beta_hat + qt((1-alpha)/2,df)*t_denominator
+ub <-  beta_hat + qt(alpha+(1-alpha)/2,df)*t_denominator
 
 CI <- data.frame(lb,ub,alpha,beta_hat,beta)
 
@@ -93,8 +93,8 @@ pval_chol <- 2*pt(-abs(t_stat_chol),df=nrow(X)-nrow(beta_hat_chol))
 ####i)d: Confidence Interal
 alpha <- .90
 
-lb_chol <- beta_hat_chol + qnorm((1-alpha)/2,0,1)*t_denominator_chol
-ub_chol <-  beta_hat_chol + qnorm(alpha+(1-alpha)/2,0,1)*t_denominator_chol
+lb_chol <- beta_hat_chol + qt((1-alpha)/2,df)*t_denominator_chol
+ub_chol <-  beta_hat_chol + qt(alpha+(1-alpha)/2,df)*t_denominator_chol
 
 CI_chol <- data.frame(lb_chol,ub_chol,alpha,beta_hat_chol,beta)
 
@@ -154,8 +154,5 @@ CI_lalonde <- data.frame(lb_lalonde,ub_lalonde,rep.int(alpha,nrow(beta_hat_lalon
 beta_0_lalonde <- lm(earn78 ~ treat + black + age + educ + educ2 + earn74 + black_earn74 + u74 + u75, lalonde)
 summary(beta_0_lalonde)
 
-###The Diffeent Estimates All Match
-
-
-
+###The Different Estimates All Match
 

@@ -148,7 +148,7 @@ foreach cibound of local compare {
 	forv i = 1(1)`cols' {
 	local k = `i' - 1
 	
-		g diff_`cibound'_`k' = round(`cibound'_`k',.00001) - round(`cibound'_chol_`k',.00001)
+		g diff_`cibound'_`k' = round(`cibound'_`k',.0000000001) - round(`cibound'_chol_`k',.0000000001)
 		su diff_`cibound'_`k'
 		
 	}
@@ -217,7 +217,8 @@ g df = `obs' - `cols'
 
 forv i = 1(1)`cols' {
 
-	local j = `i' - 1
+	*local j = `i' - 1
+	local j = `i'
 	g beta_hat_`j' = betahat[`i',1]
 	g t_stat_beta_`j' = tstats[`i',1]
 	g pval_beta_`j' =  2*ttail(df,abs(t_stat_beta_`j'))
@@ -227,10 +228,10 @@ forv i = 1(1)`cols' {
 
 }
 
-local colsminus = `cols' - 1
+*local colsminus = `cols' - 1
 
-forv i = 1(1)`colsminus' {
-	local j = `i' 
+forv i = 1(1)`cols' {
+	local j = `i'  
 	
 	local betahat = beta_hat_`j'
 	local pval = pval_beta_`j'
@@ -240,14 +241,7 @@ forv i = 1(1)`colsminus' {
 	
 	di "beta is `betahat'; pval is `pval', lb is `lb', ub is `ub'"
 }
-	
-	local betahat = beta_hat_0
-	local pval = pval_beta_0
-	local lb = lb_beta_0
-	local ub = ub_beta_0
-	local tstat = t_stat_beta_0
-	di "beta is `betahat'; pval is `pval', lb is `lb', ub is `ub'"
-	
+
 
 local indepvars "intercept treat black age educ educ2 earn74 black_earn74 u74 u75"
 
@@ -262,8 +256,9 @@ split independentvars_split, g(indep)
 reg earn78 `indepvars', nocons
 g df_reg = e(df_r) 
 
-forv i = 1(1)`colsminus' {
-	local j = `i' - 1 
+forv i = 1(1)`cols' {
+	
+	local j = `i' 
 	local varrel = indep`i'
 	g beta_hat_reg_`j' = _b[`varrel']
 	g se_beta_reg_`j' = _se[`varrel'] 
@@ -291,27 +286,26 @@ g lb_reg_export = .
 g ub_export = .
 g ub_reg_export = .
 
-forv i = 1(1)`colsminus' {
+forv j = 1(1)`cols' {
 	
-	local j = `i' - 1 
-	replace var = indep`i' if obscounter == `i'
-	replace beta_hat_export = beta_hat_`j' if obscounter == `i'
-	replace beta_hat_reg_export = beta_hat_reg_`j' if obscounter == `i'
-	replace se_export = se_beta_`j' if obscounter == `i'
-	replace se_reg_export = se_beta_reg_`j' if obscounter == `i'
-	replace t_stat_export = t_stat_beta_`j' if obscounter == `i'
-	replace t_stat_reg_export = t_stat_beta_reg_`j' if obscounter == `i'
-	replace pval_export = pval_beta_`j' if obscounter == `i'
-	replace pval_reg_export = pval_reg_`j' if obscounter == `i'
-	replace lb_export = lb_beta_`j' if obscounter == `i'
-	replace lb_reg_export = lb_beta_reg_`j' if obscounter == `i'
-	replace ub_export = ub_beta_`j' if obscounter == `i'
-	replace ub_reg_export = ub_beta_reg_`j' if obscounter == `i'
+	*local j = `i' - 1 
+	replace var = indep`j' if obscounter == `j'
+	replace beta_hat_export = beta_hat_`j' if obscounter == `j'
+	replace beta_hat_reg_export = beta_hat_reg_`j' if obscounter == `j'
+	replace se_export = se_beta_`j' if obscounter == `j'
+	replace se_reg_export = se_beta_reg_`j' if obscounter == `j'
+	replace t_stat_export = t_stat_beta_`j' if obscounter == `j'
+	replace t_stat_reg_export = t_stat_beta_reg_`j' if obscounter == `j'
+	replace pval_export = pval_beta_`j' if obscounter == `j'
+	replace pval_reg_export = pval_reg_`j' if obscounter == `j'
+	replace lb_export = lb_beta_`j' if obscounter == `j'
+	replace lb_reg_export = lb_beta_reg_`j' if obscounter == `j'
+	replace ub_export = ub_beta_`j' if obscounter == `j'
+	replace ub_reg_export = ub_beta_reg_`j' if obscounter == `j'
 		
 }
 
 keep var *export
 
-
-
+export excel "$out/STATA_PS1_Q2_5a_5b.xlsx", firstrow(variables) replace
 

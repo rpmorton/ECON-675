@@ -6,6 +6,7 @@ library(plyr)
 library(data.table)
 library(matlib)
 library(randomizr)
+library(tidyverse)
 
 rm(list=ls())
 
@@ -66,7 +67,7 @@ rand_vec <- complete_ra(N = count_total, m = count_treated)
 #rand_vec2 <-  complete_ra(N = count_total, m = count_treated)
 randomvectors <- data.frame(rand_vec)
 
-loops <- 500
+loops <- 999
 loopcounter <- 1
 loopsused <-1 
 
@@ -119,16 +120,118 @@ for (j in 1:loops) {
   outcomes_fish_ctrl <- na.omit(subset(lalonde_rand,randomvectors[, j] < .5))
   ks_fisher <- ks.test(outcomes_fish_treat$earn78,outcomes_fish_ctrl$earn78)
   
-  fisherresults[j,3] <- ks_fisher[["statistic"]]
+  fisherresults[j,3] <- as.numeric(ks_fisher[["statistic"]])
   
 }
 
+fisherresults$diff_means_fish <- fisherresults$fishertreat_mean - fisherresults$fisherctrl_mean
 
 act_treat_means <- ddply(lalonde_rand,.(treat),summarize, mean = mean(earn78))
 mean_treat_act <-  na.omit(act_treat_means[which(act_treat_means[1,] > .75),])
 mean_ctrl_act <-  na.omit(act_treat_means[which(act_treat_means[1,] < .75),])
 diff_means_act <- mean_treat_act$mean - mean_ctrl_act$mean
 
+lalonde_ctrl <- subset(lalonde,treat < 1)
+lalonde_treat <- subset(lalonde,treat > 0)
+pre_ks_act <- ks.test(lalonde_treat$earn78,lalonde_ctrl$earn78)
+ks_act <- as.numeric(pre_ks_act[["statistic"]])
 
+##Find P Value and Confidence Interval for Diff Means and KS Test
 
+#Diff Means: P Value
+fisherresults$fisher_diff_means <- fisherresults$fishertreat_mean - fisherresults$fisherctrl_mean
+fisherresults$act_diff_means <- diff_means_act
+fisherresults <-  mutate(fisherresults, diff_gt_act = ifelse(abs(fisher_diff_means) > abs(act_diff_means), 1, 0))
+pval_diff_means <- sum(fisherresults$diff_gt_act) / loops
   
+#Diff Means: CI
+fishsorted <- fisherresults[order(fisherresults$fisher_diff_means),]
+fishsorted$rowcounter <- seq.int(nrow(fishsorted))
+lb_count <- .025 * loops
+ub_count <- .975 * loops
+lb_diff_means_cols <- fishsorted[lb_count,]
+lb_diff_means <- lb_diff_means_cols$fisher_diff_means
+ub_diff_means_cols <- fishsorted[ub_count,]
+ub_diff_means <- ub_diff_means_cols$fisher_diff_means
+
+#KS Test: P Value
+fisherresults$act_ks <- ks_act
+fisherresults <-  mutate(fisherresults, ks_gt_act = ifelse(abs(fisher_ks) > abs(act_ks), 1, 0))
+pval_ks <- sum(fisherresults$ks_gt_act) / loops
+
+#KS: CI
+fishsorted <- fisherresults[order(fisherresults$fisher_ks),]
+lb_ks_cols <- fishsorted[lb_count,]
+lb_ks <- lb_ks_cols$fisher_ks
+ub_ks_cols <- fishsorted[ub_count,]
+ub_ks <- ub_ks_cols$fisher_ks
+
+#Question 3: a
+rm(list=ls())
+
+lalonde <- read.csv("/Users/russellmorton/Desktop/Coursework/Fall 2018/Econ 675/Problem Sets/Problem Set Data/LaLonde_1986.csv")
+
+lalonde_treated <- subset(lalonde, treat > 0)
+lalonde_control <- subset(lalonde, treat < 1)
+
+size <- .05
+
+dev_from_mean_treat <- lalonde_treated$earn78 - rep.int(mean(lalonde_treated$earn78),nrow(lalonde_treated))
+sum_sq_dev_from_mean_treat <- sum(dev_from_mean_treat * dev_from_mean_treat)                                                                 
+s2_treat <- (1/(nrow(lalonde_treated)-1)) * sum_sq_dev_from_mean_treat                                                           
+
+dev_from_mean_ctrl <- lalonde_control$earn78 - rep.int(mean(lalonde_control$earn78),nrow(lalonde_control))
+sum_sq_dev_from_mean_ctrl <- sum(dev_from_mean_ctrl * dev_from_mean_ctrl)                                                                 
+s2_ctrl <- (1/(nrow(lalonde_control)-1)) * sum_sq_dev_from_mean_ctrl   
+
+conserv_var <- (s2_treat/nrow(lalonde_treated)) + (s2_ctrl/nrow(lalonde_control))
+df <- nrow(lalonde_control) + nrow(lalonde_treated) - 2
+conserv_se <- sqrt(conserv_var)
+
+compare_tau <- seq.int(4001) - 2001
+
+t_input_gt_tau <- -1*(compare_tau / conserv_se) + qt(1 - (size/2), df)
+t_prob_gt_tau <- pt(t_input_gt_tau,df)
+t_input_lt_tau <- -1*(compare_tau / conserv_se) - qt(1 - (size/2), df)
+t_prob_lt_tau <- pt(t_input_lt_tau,df)
+power_tau <- t_prob_lt_tau + 1 - t_prob_gt_tau
+
+graphpowerfct <- data.frame(compare_tau,power_tau)
+
+ggplot(graphpowerfct, aes(compare_tau,power_tau)) + geom_point() + geom_smooth()
+
+#Question 3:b--GRID SEARCH
+on <- 1
+tildet <- 10
+
+while (on > 0) {
+
+tildet <- tildet - .01
+power <-  pnorm(-1.96 - tildet ) - pnorm(1.96 - tildet) + 1
+
+  if (power < .8) {
+  on <<- 0
+  }
+                                             
+}                                           
+                                            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                         

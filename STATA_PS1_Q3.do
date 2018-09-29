@@ -1,11 +1,9 @@
-ksmirnov earn78, by(treat)
-g test = r(D)
-
 ***Created by RM on 2018.09.33
 ***For ECON 675, PS 1, Q 3
 *********************
 
 global data "/Users/russellmorton/Desktop/Coursework/Fall 2018/Econ 675/Problem Sets/Problem Set Data"
+global out "/Users/russellmorton/Desktop/Coursework/Fall 2018/Econ 675/Problem Sets/Problem Set Outputs"
 
 clear
 set more off
@@ -57,7 +55,7 @@ di "the CI is `lb' to `ub'"
 ttest earn78, by(treat)
 
 /************
-***Question 3:2a
+***Question 3: 2a and 2b
 ***********/
 
 clear
@@ -65,14 +63,13 @@ set more off
 
 import delim "$data/LaLonde_1986", delim(",")
 
-local loops = 500
+global loops = 999
 
 egen count_treat = sum(treat)
 egen count_total = count(treat)
 
 local treatcount = count_treat
 local totalcount = count_total
-
 
 **Create Random Vectors
 clear
@@ -187,13 +184,11 @@ set more off
 
 import delim "$data/LaLonde_1986", delim(",")
 
-local loops = 500
-
 g obs = [_n]
 
 merge 1:1 obs using "$data/random vectors"
 
-forv i = 1(1)`loops' {
+forv i = 1(1)$loops {
 *forv i = 1(1)`test' {
 
 	*difference in means
@@ -210,7 +205,7 @@ forv i = 1(1)`loops' {
 	drop mean_effect_`i' pre_control_`i' control_`i' pre_treatment_`i' treatment_`i'
 	
 	*ks test
-	ksmirnov earn78, by(fihser`i')
+	ksmirnov earn78, by(fisher`i')
 		
 	g ks_stat_`i' = r(D)
 
@@ -228,45 +223,16 @@ egen treatment = max(pre_treatment)
 	
 g treat_diff_means_actual = treatment - control
 
-local treatdiffmeansact = treat_diff_means_actual
+global treatdiffmeansact = treat_diff_means_actual
 	
 drop mean_effect pre_control control pre_treatment treatment
 
 *Actual Treatment KS
 
-g emp_cdf_control_act = 0
-g emp_cdf_treat_act = 0
-g cdf_diff_act = .
+ksmirnov earn78, by(treat)
+g ks_stat_act = r(D)
 
-levelsof(earn78), l(outcomes)
-
-foreach outcome of local outcomes {
-	
-	g out = `outcome'
-	g lt_outcome = earn78 <= `outcome'
-		
-	bys treat: egen count_lt_outcome = sum(lt_outcome) 
-	bys treat: egen count_by_fisher = count(lt_outcome)
-		
-	g pre_pre_emp_cdf_control_act = count_lt_outcome / count_by_fisher if treat == 0
-	egen pre_emp_cdf_control_act = max(pre_pre_emp_cdf_control_act)
-	replace emp_cdf_control_act = pre_emp_cdf_control_act if earn78 == `outcome'
-		
-	g pre_pre_emp_cdf_treat_act = count_lt_outcome / count_by_fisher if treat == 1
-	egen pre_emp_cdf_treat_act = max(pre_pre_emp_cdf_treat_act)
-	replace emp_cdf_treat_act = pre_emp_cdf_treat_act if earn78 == `outcome'	
-		
-	replace cdf_diff_act = abs(emp_cdf_treat_act - emp_cdf_control_act) if earn78 == `outcome'	
-	
-	drop out lt_outcome count_lt_outcome count_by_fisher pre_pre_emp_cdf_control_act pre_pre_emp_cdf_treat_act
-	drop pre_emp_cdf_control_act pre_emp_cdf_treat_act
-	
-	}
-	
-egen ks_stat_act = max(cdf_diff_act)
-		
-local ksstatact = ks_stat_act
-	
+global ksstatact = ks_stat_act
 
 save "$data/fisher treatment effect distribution", replace
 
@@ -278,69 +244,77 @@ drop treat_diff_means_actual ks_stat_act
 
 save "$data/fisher results", replace
 
-**Now turn treatment effects into a long dataset 
+**Now get  p value for effect and confidence interval for diff means
 
 use "$data/fisher results", clear
 
-keep treat_diff* 
+keep treat_diff*
 
 xpose, clear
+sort v1
+g treat_diff_means_actual = $treatdiffmeansact
+g abs_treat_diff = abs(v1)
 
-g abs_dm_treat = abs(v1)
+g diff_gt_actual = abs_treat_diff > treat_diff_means_actual
+egen count_gt_acutal = sum(diff_gt_actual)
 
-rename v1 fisher_treat
+g pval_diff_means = count_gt_acutal / $loops
+tab pval_diff_means
 
-g treat_diff_means_actual = `treatdiffmeansact'
+g counter = [_n]
 
-*diff means pval
+g lb_ci_diff_means_flag = counter == round(.025 * $loops)
+g pre_lb_ci_diff_means = v1 if lb_ci_diff_means_flag == 1
+egen lb_ci_diff_means = max(pre_lb_ci_diff_means)
+drop pre_lb_ci_diff_means
 
-g gt_df_mean_treat_actual = abs_dm_treat >= treat_diff_means_actual
+g ub_ci_diff_means_flag = counter == round(.975 * $loops)
+g pre_ub_ci_diff_means = v1 if ub_ci_diff_means_flag == 1
+egen ub_ci_diff_means = max(pre_ub_ci_diff_means)
+drop pre_ub_ci_diff_means
 
-egen count_gt_df_mean_treat_actual = sum(gt_df_mean_treat_actual)
-egen count_total = count(count_gt_df_mean_treat_actual)
+tab lb_ci_diff_means
+tab ub_ci_diff_means
 
-g pctile_df_mean_treat_effect = count_gt_df_mean_treat_actual/count_total
 
-hist fisher_treat, xline(`treatdiffmeansact')
-
-save "$data/fisher diff means results", replace
-
-*ks test pval
+**Now get  p value for effect and confidence interval for ks test
 
 use "$data/fisher results", clear
 
-keep ks* 
+keep ks*
 
 xpose, clear
+sort v1
+g treat_ks_actual = $ksstatact
+g abs_ks = abs(v1)
 
-g abs_ks_stat = abs(v1)
+g diff_gt_actual = abs_ks > treat_ks_actual
+egen count_gt_acutal = sum(diff_gt_actual)
 
-rename v1 fish_ks_stat
+g pval_ks = count_gt_acutal / $loops
+tab pval_ks
 
-g ks_stat_act = `ksstatact'
+g counter = [_n]
 
-*diff means pval
+g lb_ci_ks_flag = counter == round(.025 * $loops)
+g pre_lb_ci_ks = v1 if lb_ci_ks_flag == 1
+egen lb_ci_ks = max(pre_lb_ci_ks)
+drop pre_lb_ci_ks
 
-g gt_ks_treat_actual = abs_ks_stat >= ks_stat_act
+g ub_ci_ks_flag = counter == round(.975 * $loops)
+g pre_ub_ci_ks = v1 if ub_ci_ks_flag == 1
+egen ub_ci_ks = max(pre_ub_ci_ks)
+drop pre_ub_ci_ks
 
-egen count_gt_ks_treat_actual = sum(gt_ks_treat_actual)
-egen count_total = count(gt_ks_treat_actual)
-
-g pctile_ks_treat_effect = count_gt_ks_treat_actual/count_total
-
-hist fish_ks_stat, xline(`ksstatact')
-
-save "$data/fisher ks results", replace
-
-
+tab lb_ci_ks
+tab ub_ci_ks
 
 
 /************
-***Question 3
+***Question 3: 3a and 3b
 ***********/
 
-*Power Fct Using Size of .05 
-
+*3a: Power Fct Using Size of .05 
 
 clear
 set more off
@@ -349,7 +323,6 @@ global size = .05
 
 import delim "$data/LaLonde_1986", delim(",")
 
-*Question 3:3a
 g ones = 1
 
 bys treat: egen count_by_treat = sum(ones)
@@ -402,10 +375,10 @@ g size = $size
 
 
 twoway (scatter power_tau tau_power, msize(tiny) xtitle("{&tau}") ytitle("{&beta}({&tau})") title("Power Function against H{sub:0}: {&tau} = 0") note("Power function for df = $df with size = $size") yline($size) )
+graph export "$out/PS1 Q3a STATA.pdf", as (pdf) replace
 
 
-
-*Question 3:3b
+*Question 3:3b--GRID SEARCH
 clear
 set more off
 
@@ -431,31 +404,7 @@ while `on' > 0 {
 	
 }
 
-/* Re Do with smaller step size */
-	
-clear	
-	
-set obs 1
-g obs = 1
-g tildet = 0
 
-local on = 1
-local tildet = 3
-
-while `on' > 0 {
-
-	capture drop power on_update
-	g power =  normal(-1.96 - `tildet' ) - normal(1.96 - `tildet') + 1
-	g on_update = power >= .8
-	local on = on_update
-	
-	replace tildet = `tildet'
-	
-	if `on' > 0 {
-		local tildet = `tildet' - .001
-	}
-	
-}
 	
 
 
