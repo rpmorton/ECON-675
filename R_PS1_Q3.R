@@ -67,7 +67,7 @@ rand_vec <- complete_ra(N = count_total, m = count_treated)
 #rand_vec2 <-  complete_ra(N = count_total, m = count_treated)
 randomvectors <- data.frame(rand_vec)
 
-loops <- 999
+loops <- 1999
 loopcounter <- 1
 loopsused <-1 
 
@@ -147,12 +147,16 @@ pval_diff_means <- sum(fisherresults$diff_gt_act) / loops
 #Diff Means: CI
 fishsorted <- fisherresults[order(fisherresults$fisher_diff_means),]
 fishsorted$rowcounter <- seq.int(nrow(fishsorted))
-lb_count <- .025 * loops
-ub_count <- .975 * loops
+lb_count <- round(.025 * loops)
+ub_count <- round(.975 * loops)
 lb_diff_means_cols <- fishsorted[lb_count,]
 lb_diff_means <- lb_diff_means_cols$fisher_diff_means
 ub_diff_means_cols <- fishsorted[ub_count,]
 ub_diff_means <- ub_diff_means_cols$fisher_diff_means
+
+##EDITED ON 10.03 for alt confidence interval including actual diff means
+lb_diff_means_act <- lb_diff_means + diff_means_act
+ub_diff_means_act <- ub_diff_means + diff_means_act
 
 #KS Test: P Value
 fisherresults$act_ks <- ks_act
@@ -165,6 +169,10 @@ lb_ks_cols <- fishsorted[lb_count,]
 lb_ks <- lb_ks_cols$fisher_ks
 ub_ks_cols <- fishsorted[ub_count,]
 ub_ks <- ub_ks_cols$fisher_ks
+
+##EDITED ON 10.03 for alt confidence interval including actual diff means
+lb_ks_act <- lb_ks + ks_act
+ub_ks_act <- ub_ks + ks_act
 
 #Question 3: a
 rm(list=ls())
