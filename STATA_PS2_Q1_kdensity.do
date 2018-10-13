@@ -203,12 +203,12 @@ forv h = $minh (1)$maxh {
 	
 }
 
-twoway (scatter imse_l0_h h_forgraph,xtitle("Bandwidth") ytitle("Predicted IMSE L0"))  
-graph export "$out/PS2 Q3c_ISME_L0 STATA.pdf", as (pdf) replace
+twoway (connected imse_l0_h h_forgraph,xtitle("Bandwidth") ytitle("Predicted IMSE L0"))  
+graph export "$out/PS2 Q1_3c_ISME_L0 STATA.pdf", as (pdf) replace
 
-twoway (scatter imse_li_h h_forgraph,xtitle("Bandwidth") ytitle("Predicted IMSE LI"))  
-graph export "$out/PS2 Q3c_IMSE_LI STATA.pdf", as (pdf) replace
+twoway (connected imse_li_h h_forgraph,xtitle("Bandwidth") ytitle("Predicted IMSE LI"))  
+graph export "$out/PS2 Q1_3c_IMSE_LI STATA.pdf", as (pdf) replace
 
-twoway (scatter aimse_hat_h h_forgraph,xtitle("Bandwidth") ytitle("Average Predicted AIMSE"))  
-graph export "$out/PS2 Q3c_AIMSE_Predicted STATA.pdf", as (pdf) replace
+twoway (connected aimse_hat_h h_forgraph,xtitle("Bandwidth") ytitle("Average Predicted AIMSE"))  
+graph export "$out/PS2 Q1_3c_AIMSE_Predicted STATA.pdf", as (pdf) replace
 
