@@ -134,20 +134,12 @@ global kmin = k_min
 
 **Generate Data
 
-clear
-set obs 1
-
-g sims = $sims
-g obs = $obs
-g simsobs = sims * obs
-local simsobs = simsobs
+forv s = 1(1)$sims {
 
 clear
-
-set obs `simsobs'
+set obs $obs
 
 quietly g x = runiform(-1,1)
-
 
 forv i = 1(1)5 {
 		g rnorm`i'_sq = (rnormal())^2
@@ -157,41 +149,96 @@ quietly g epsilon = x * x * (rnorm1_sq + rnorm2_sq + rnorm3_sq + rnorm4_sq + rno
 
 quietly g y = exp(-.1 * (4*(x^2)-1)^2) * sin(5*x) + epsilon
 
+keep x y
+
+g obs = [_n]
+
+expand = 11 if obs == 1, g(expanded)
+drop obs
+g obs = [_n]
+
+replace y = . if expanded == 1
+
+g expanded_obs = obs - $obs if obs > $obs
+
+replace x = (expanded_obs - 1)  / ( (11 - 2) / 2) - 1 if expanded_obs != .
+
 forv k = 1(1)$kmin {
 g x_`k' = x^`k'
 }
 
-g obsn = [_n]
-g group = ceil(obsn / $sims)
-g intercept = 1
+quietly reg y x_*
 
-g beta_0 = .
+predict fitted, xb
+
+g x_0 = 1
+
+mata: mata clear
+mata: X = st_data(.,("x_0"))
 forv k = 1(1)$kmin {
-g beta_x_`k' =.
+	capture drop x_add
+	quietly g x_add = x_`k'
+	mata: add = st_data(.,("x_add"))
+	mata: X = (X,add)
+}
+mata:st_matrix("X",X)
+		*matrix list X
+		
+mata: Xinv = luinv(X' * X)
+mata: wmat = X * Xinv * X'
+mata: wmatdiag = diagonal(wmat)
+mata: st_matrix("wmatdiag", wmatdiag)
+*matrix list wmatdiag
+		
+quietly g weight_i = wmatdiag[obs,1]
+
+*di "finishes mata piece"
+
+g resid = abs(y - fitted)
+egen sigma_sq_hat = sum( (1 / ($obs - 1 ) ) * resid^2)
+egen var = sum( (1 / $obs ) * weight_i^2 * sigma_sq_hat)
+
+g ub_1 = fitted + 1.96 * sqrt(var)
+g ub_2 = fitted + 1.96 * sqrt(var / $obs)
+g lb_1 = fitted - 1.96 * sqrt(var)
+g lb_2 = fitted - 1.96 * sqrt(var / $obs)
+
+keep if expanded == 1
+
+g sim = `s'
+keep x fitted sim ub* lb*
+
+
+if `s' < 1.5 {
+	
+	quietly save "$temp/sim 5c", replace
+	
+	}
+
+if `s' > 1.5 {
+	
+	quietly append using "$temp/sim 5c"
+	quietly save "$temp/sim 5c", replace
+
+	}
+
 }
 
-egen max_group = max(group)
-local maxgroup = max_group
+use "$temp/sim 5c", clear
 
-forv i  = 1(1)`maxgroup' {
-quietly reg y intercept x_* if group == `i', nocons
-	replace beta_0 = _b[intercept] if group == `i'
-	forv k = 1(1)$kmin {
-		replace beta_x_`k' = _b[x_`k'] if group == `i'
-		}
-}
+bys x: egen avg_reg_fct = mean(fitted)
+bys x: egen avg_ub_1 = mean(ub_1)
+bys x: egen avg_ub_2 = mean(ub_2)
+bys x: egen avg_lb_1 = mean(lb_1)
+bys x: egen avg_lb_2 = mean(lb_2)
 
+egen tagx = tag(x)
+keep if tagx == 1
 
-egen avg_beta_0 = mean(beta_0)
-forv k = 1(1)$kmin {
-	egen avg_beta_`k' = mean(beta_x_`k')
-}
+keep x avg*
 
-forv k = 0(1)$kmin {
-	local avgbeta`k' = avg_beta_`k'
-}
+save "$temp/sim 5c for merge", replace
 
-di "avgbeta0 is `avgbeta0'"
 
 clear
 
@@ -211,41 +258,11 @@ forv k = 1(1)$kmin {
 reg true_gdp x_*
 predict truereg, xb
 
-g mu_hat = 0
-g x_0 = 1
-forv k = 0(1)$kmin {
-	replace mu_hat = mu_hat + x_`k' * `avgbeta`k''
-}
+merge 1:1 x using "$temp/sim 5c for merge"
 
-/* Using result from Q2, 3, construct CI:
-*/
-
-		mata: mata clear
-		mata: X = st_data(.,("x_0"))
-		forv k = 1(1)$kmin {
-		g x_`k' = x^`k'
-		}
-		quietly g x_add = x_`k'
-		mata: add = st_data(.,("x_add"))
-		mata:st_matrix("X",X)
-		*matrix list X
-		
-		mata: Xinv = luinv(X' * X)
-		mata: wmat = X * Xinv * X'
-		mata: wmatdiag = diagonal(wmat)
-		mata: st_matrix("wmatdiag", wmatdiag)
-		*matrix list wmatdiag
-		
-		quietly g weight_i = wmatdiag[obs,1]
-
-g resid = abs(truereg - mu_hat)
-egen var_hat = sum( (1 / ( $obsc - 1) ) * resid^2)
-egen v_hat = sum(weight_i^2 * var_hat)
-
-g ci_lb = mu_hat - 1.96 * sqrt(v_hat)
-g ci_ub = mu_hat + 1.96 * sqrt(v_hat)
+sort x
 	
-twoway (scatter mu_hat x, msize(vsmall)) (scatter ci_lb x, msize(tiny)) (scatter ci_ub x, msize(tiny))  (scatter truereg x, msize(vsmall) xtitle("x") )
+twoway (connected avg_reg_fct x, msize(vsmall)) (scatter avg_ub_1 x, msize(small)) (scatter avg_lb_1 x, msize(small))  (scatter truereg x, msize(vsmall) xtitle("x") )
 
 	
 	
