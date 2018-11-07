@@ -27,6 +27,6 @@ logit notmissing s_age s_hhpeople ln_s_incomepc, vce(bootstrap, reps(100))
 *Predicted value
 predict pred_val
 
-twoway (kdensity pred_val, xtitle("x") ytitle("Estimated Density") title("Density of Propensity Scores" ) ///
+twoway (kdensity pred_val, xtitle("x") ytitle("Estimated Density") title("Density of Propensity Scores" ) ) 
 graph export "$out/STATA_PS3_Q1_9c.pdf", as (pdf) replace
 
