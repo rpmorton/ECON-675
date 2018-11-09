@@ -14,7 +14,7 @@ global sims = 1000
 set seed 42338992
 
 set obs 1
-g totalobs = 50 * $sims
+g totalobs = 50 * ($sims + 1)
 local totalobs = totalobs
 
 clear

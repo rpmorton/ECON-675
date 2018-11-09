@@ -10,7 +10,14 @@ global alpha = .95
 
 /* First, ATE using LaLonde Data */
 
-import delim using "$data/LaLonde_1986.csv", delim(",") clear
+import delim using "$data/LaLonde_all.csv", delim(",") clear
+
+*Prep Data
+
+drop if treat == 2
+rename re78 earn78
+rename re75 earn75
+rename re74 earn74
 
 *Diff in Means
 
@@ -68,10 +75,10 @@ teffects ipw (earn78) (treat $speca $specb $specc , probit) , ate
 
 teffects ipwra (earn78 $speca) (treat $speca , probit) , ate
 *DOES NOT CONVERGE, SO MODEL DIFFERENTLY
-probit treat $speca $specb 
-predict predval
-teffects ipwra (earn78 $speca $specb) (treat $speca $specb , probit) , ate
-teffects ipwra (earn78 $speca $specb $specc) (treat $speca $specb $specc , probit) , ate 
+*probit treat $speca $specb 
+*predict predval
+teffects ipwra (earn78 $speca $specb) (treat $speca $specb , probit) , ate iterate(50)
+teffects ipwra (earn78 $speca $specb $specc) (treat $speca $specb $specc , probit) , ate iterate(50)
 
 
 *N1 Match
@@ -90,7 +97,14 @@ teffects psmatch (earn78) (treat $speca $specb $specc ) , ate
 
 /* Second, ATT using LaLonde Data */
 
-import delim using "$data/LaLonde_1986.csv", delim(",") clear
+import delim using "$data/LaLonde_all.csv", delim(",") clear
+
+*Prep Data
+
+drop if treat == 2
+rename re78 earn78
+rename re75 earn75
+rename re74 earn74
 
 
 *Reg Impute
@@ -108,8 +122,8 @@ teffects ipw (earn78) (treat $speca $specb $specc , probit) , atet
 *DR
 
 teffects ipwra (earn78 $speca ) (treat $speca , probit) , atet
-teffects ipwra (earn78 $speca $specb ) (treat $speca $specb , probit) , atet
-teffects ipwra (earn78 $speca $specb $specc ) (treat $speca $specb $specc , probit) , atet
+teffects ipwra (earn78 $speca $specb ) (treat $speca $specb , probit) , atet iterate(50)
+teffects ipwra (earn78 $speca $specb $specc ) (treat $speca $specb $specc , probit) , atet iterate(50)
 
 *N1 Match
 
@@ -188,20 +202,107 @@ teffects ra (earn78 $speca $specb $specc) (treat_alt), ate
 probit treat_alt $speca
 preserve
 predict predval
-drop if predval < .01 | predval > .99
-teffects ipw (earn78) (treat_alt $speca , probit) , ate
+*drop if predval < .01 | predval > .99
+drop if predval < .0001 
+teffects ipw (earn78) (treat_alt $speca , probit) , ate  iterate(50)
 restore
-
-*teffects ipw (earn78) (treat_alt $speca $specb , probit) , ate
 
 probit treat_alt $speca $specb
 preserve
 predict predval
-drop if predval < .01 | predval > .99
-teffects ipw (earn78) (treat_alt $speca $specb , probit) , ate
+drop if predval < .0001
+teffects ipw (earn78) (treat_alt $speca $specb , probit) , ate iterate(50)
 restore
 
-teffects ipw (earn78) (treat_alt $speca $specb $specc , probit) , ate
+probit treat_alt $speca $specb $specc
+preserve
+predict predval
+drop if predval < .0001
+teffects ipw (earn78) (treat_alt $speca $specb $specc , probit) , ate iterate(50)
+restore
+
+*DR
+probit treat_alt $speca
+preserve
+predict predval
+*drop if predval < .01 | predval > .99
+drop if predval < .0001 
+teffects ipwra (earn78) (treat_alt $speca , probit) , ate iterate(50)
+restore
+
+probit treat_alt $speca $specb
+preserve
+predict predval
+*drop if predval < .01 | predval > .99
+drop if predval < .0001 
+teffects ipwra (earn78) (treat_alt $speca $specb , probit) , ate iterate(50)
+restore
 
 
+probit treat_alt $speca $specb $specc
+preserve
+predict predval
+*drop if predval < .01 | predval > .99
+drop if predval < .0001 
+teffects ipwra (earn78) (treat_alt $speca $specb $specc , probit) , ate iterate(50)
+restore
 
+*N1 Match
+
+teffects nnmatch (earn78 $speca ) (treat) , ate nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb ) (treat) , ate nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb $specc ) (treat) , ate nneighbor(1) metric(maha)
+
+*P Match
+
+teffects psmatch (earn78) (treat $speca ) , ate
+
+probit treat_alt $speca $specb
+preserve
+predict predval
+*drop if predval < .01 | predval > .99
+drop if predval < .0001 
+teffects psmatch (earn78) (treat_alt $speca $specb , probit) , ate
+restore
+
+
+probit treat_alt $speca $specb $specc
+preserve
+predict predval
+*drop if predval < .01 | predval > .99
+drop if predval < .0001 
+teffects psmatch (earn78) (treat_alt $speca $specb $specc, probit) , ate
+restore
+
+
+/* Finally, ATT using PSID Data */
+
+
+*Reg Impute
+
+teffects ra (earn78 $speca) (treat_alt), atet
+teffects ra (earn78 $speca $specb) (treat_alt), atet
+teffects ra (earn78 $speca $specb $specc) (treat_alt), atet
+
+*IPW
+
+teffects ipw (earn78) (treat_alt $speca , probit) , atet  iterate(50)
+teffects ipw (earn78) (treat_alt $speca $specb , probit) , atet iterate(50)
+teffects ipw (earn78) (treat_alt $speca $specb $specc , probit) , atet iterate(50)
+
+*DR
+teffects ipwra (earn78) (treat_alt $speca , probit) , atet iterate(50)
+teffects ipwra (earn78) (treat_alt $speca $specb , probit) , atet iterate(50)
+teffects ipwra (earn78) (treat_alt $speca $specb $specc , probit) , atet iterate(50)
+
+*N1 Match
+
+teffects nnmatch (earn78 $speca ) (treat) , atet nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb ) (treat) , atet nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb $specc ) (treat) , atet nneighbor(1) metric(maha)
+
+*P Match
+
+teffects psmatch (earn78) (treat $speca ) , atet
+teffects psmatch (earn78) (treat_alt $speca $specb, probit) , atet
+teffects psmatch (earn78) (treat_alt $speca $specb $specc, probit) , atet
