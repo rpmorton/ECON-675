@@ -37,8 +37,8 @@ g ctrl_count_earn = `r(N)'
 g se_diff_means = sqrt(  ( (treat_sd_earn * treat_sd_earn ) / treat_count_earn ) + ( (ctrl_sd_earn * ctrl_sd_earn ) / ctrl_count_earn ) )
 
 g diff_means_earn = treat_avg_earn - ctrl_avg_earn
-g diff_means_ci_low = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, 1 - ($alpha / 2) ) * se_diff_means
-g diff_means_ci_high = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, $alpha / 2 ) * se_diff_means
+g diff_means_ci_low = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, $alpha + (1 - $alpha ) / 2 ) * se_diff_means
+g diff_means_ci_high = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, (1 - $alpha ) / 2 ) * se_diff_means
 
 *OLS
 
@@ -106,6 +106,15 @@ rename re78 earn78
 rename re75 earn75
 rename re74 earn74
 
+g ln_earn74 = ln(earn74 + 1)
+g ln_earn75 = ln(earn75 + 1)
+
+g age2 = age^2
+g educ2 = educ^2
+
+g age3 = age^3
+g black_u74 = black * u74
+g educ_ln_earn74 = educ * ln_earn74
 
 *Reg Impute
 
@@ -167,8 +176,8 @@ g ctrl_count_earn = `r(N)'
 g se_diff_means = sqrt(  ( (treat_sd_earn * treat_sd_earn ) / treat_count_earn ) + ( (ctrl_sd_earn * ctrl_sd_earn ) / ctrl_count_earn ) )
 
 g diff_means_earn = treat_avg_earn - ctrl_avg_earn
-g diff_means_ci_low = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, 1 - ($alpha / 2) ) * se_diff_means
-g diff_means_ci_high = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, $alpha / 2 ) * se_diff_means
+g diff_means_ci_low = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, $alpha + (1 - $alpha ) / 2 ) * se_diff_means
+g diff_means_ci_high = diff_means_earn +  invttail(treat_count_earn - 1 + ctrl_count_earn - 1, (1 - $alpha ) / 2 ) * se_diff_means
 
 *OLS
 
@@ -214,11 +223,20 @@ drop if predval < .0001
 teffects ipw (earn78) (treat_alt $speca $specb , probit) , ate iterate(50)
 restore
 
+/* NO SE WITH PROBIT:
 probit treat_alt $speca $specb $specc
 preserve
 predict predval
 drop if predval < .0001
 teffects ipw (earn78) (treat_alt $speca $specb $specc , probit) , ate iterate(50)
+restore
+*/
+
+logit treat_alt $speca $specb $specc
+preserve
+predict predval
+drop if predval < .0001
+teffects ipw (earn78) (treat_alt $speca $specb $specc , logit) , ate iterate(50)
 restore
 
 *DR
@@ -238,24 +256,23 @@ drop if predval < .0001
 teffects ipwra (earn78) (treat_alt $speca $specb , probit) , ate iterate(50)
 restore
 
-
-probit treat_alt $speca $specb $specc
+logit treat_alt $speca $specb $specc
 preserve
 predict predval
 *drop if predval < .01 | predval > .99
 drop if predval < .0001 
-teffects ipwra (earn78) (treat_alt $speca $specb $specc , probit) , ate iterate(50)
+teffects ipwra (earn78) (treat_alt $speca $specb $specc , logit) , ate iterate(50)
 restore
 
 *N1 Match
 
-teffects nnmatch (earn78 $speca ) (treat) , ate nneighbor(1) metric(maha)
-teffects nnmatch (earn78 $speca $specb ) (treat) , ate nneighbor(1) metric(maha)
-teffects nnmatch (earn78 $speca $specb $specc ) (treat) , ate nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca ) (treat_alt) , ate nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb ) (treat_alt) , ate nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb $specc ) (treat_alt) , ate nneighbor(1) metric(maha)
 
 *P Match
 
-teffects psmatch (earn78) (treat $speca ) , ate
+teffects psmatch (earn78) (treat_alt $speca ) , ate
 
 probit treat_alt $speca $specb
 preserve
@@ -297,12 +314,12 @@ teffects ipwra (earn78) (treat_alt $speca $specb $specc , probit) , atet iterate
 
 *N1 Match
 
-teffects nnmatch (earn78 $speca ) (treat) , atet nneighbor(1) metric(maha)
-teffects nnmatch (earn78 $speca $specb ) (treat) , atet nneighbor(1) metric(maha)
-teffects nnmatch (earn78 $speca $specb $specc ) (treat) , atet nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca ) (treat_alt) , atet nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb ) (treat_alt) , atet nneighbor(1) metric(maha)
+teffects nnmatch (earn78 $speca $specb $specc ) (treat_alt) , atet nneighbor(1) metric(maha)
 
 *P Match
 
-teffects psmatch (earn78) (treat $speca ) , atet
+teffects psmatch (earn78) (treat_alt $speca ) , atet
 teffects psmatch (earn78) (treat_alt $speca $specb, probit) , atet
 teffects psmatch (earn78) (treat_alt $speca $specb $specc, probit) , atet
