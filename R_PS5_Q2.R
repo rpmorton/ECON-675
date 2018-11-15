@@ -44,7 +44,7 @@ simcount <- rep(-100,sims*length(gamma2))
 resultsdata <- data.frame(beta_OLS, se_beta_OLS, beta_OLS_sig, beta_2SLS, se_beta_2SLS,
                           beta_2SLS_sig, F_2SLS, gamma, simcount)
 
-len_gam2 <- length(gamma2)
+len_gam2 <- length(gamma2)*1 
 
 for(i in 1:sims) {
   for(g in 1:len_gam2) {
@@ -60,21 +60,23 @@ for(i in 1:sims) {
     y <- beta * x + u
     regdata <- data.frame(x,y,z)
     
+    row <- 4 * (i-1) + g
+    
     olsmodel <- lm(y ~  x ,data=regdata)
     olsresults <- coef(summary(olsmodel))
-    resultsdata[i,1] <- olsresults[2,1]
-    resultsdata[i,2] <- olsresults[2,2]
-    resultsdata[i,3] <- ifelse(abs(olsresults[2,1])/olsresults[2,2] >= 1.96, 1, 0)
+    resultsdata[row,1] <- olsresults[2,1]
+    resultsdata[row,2] <- olsresults[2,2]
+    resultsdata[row,3] <- ifelse(abs(olsresults[2,1])/olsresults[2,2] >= 1.96, 1, 0)
     
     tslsmodel <- ivreg(y ~ x | z )
     tslsresults <- coef(summary(tslsmodel))
-    resultsdata[i,4] <- tslsresults[2,1]
-    resultsdata[i,5] <- tslsresults[2,2]
-    resultsdata[i,6] <- ifelse(abs(tslsresults[2,1])/tslsresults[2,2] >= 1.96, 1, 0)
+    resultsdata[row,4] <- tslsresults[2,1]
+    resultsdata[row,5] <- tslsresults[2,2]
+    resultsdata[row,6] <- ifelse(abs(tslsresults[2,1])/tslsresults[2,2] >= 1.96, 1, 0)
     
     
-    resultsdata[i,8] <- gamma
-    resultsdata[i,9] <- i
+    resultsdata[row,8] <- gamma
+    resultsdata[row,9] <- row
     
     #tslsmodel_alt <- tsls(y ~ x, ~ z )
     #tsls_test <- tslsmodel_alt$V
