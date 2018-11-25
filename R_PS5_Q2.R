@@ -19,6 +19,9 @@ library(Hmisc)
 library(sem)
 library(AER)
 
+rm(list=ls())
+export <- "/Users/russellmorton/Desktop/Coursework/Fall 2018/Econ 675/Problem Sets/Problem Set Outputs"
+
 ##
 #parameters
 #sims <- 5000
@@ -69,7 +72,7 @@ for(i in 1:sims) {
     resultsdata[row,2] <- olsresults[2,2]
     resultsdata[row,3] <- ifelse(abs(olsresults[2,1])/olsresults[2,2] >= 1.96, 1, 0)
     
-    tslsmodel <- ivreg(y ~ x | z )
+    tslsmodel <- ivreg(y ~ x | z, data = regdata )
     tslsresults <- coef(summary(tslsmodel))
     resultsdata[row,4] <- tslsresults[2,1]
     resultsdata[row,5] <- tslsresults[2,2]
@@ -142,5 +145,8 @@ variables$sort_order <- ifelse(variables$variable == "F_2SLS", 7, variables$sort
 merge_sort_order <- merge(results_export, variables)
 
 resultssorted <- merge_sort_order[ order(merge_sort_order$gamma, merge_sort_order$sort_order), ]
+
+outpath <- paste(export,"/R_PS5_Q2.csv", sep = "")
+write.csv(resultssorted,outpath)
 
 
