@@ -24,7 +24,7 @@ export <- "/Users/russellmorton/Desktop/Coursework/Fall 2018/Econ 675/Problem Se
 
 ##
 #parameters
-#sims <- 5000
+#sims <- 1000
 sims <- 5000
 obs <- 200
 
@@ -49,62 +49,52 @@ resultsdata <- data.frame(beta_OLS, se_beta_OLS, beta_OLS_sig, beta_2SLS, se_bet
 
 len_gam2 <- length(gamma2)*1 
 
+g <- 1
+i <- 1
+
 for(i in 1:sims) {
-  for(g in 1:len_gam2) {
+  #for(g in 1:len_gam2) {
     z <- rnorm(obs,0,1)
     u <- rnorm(obs,0,1)
     indep_norm <- rnorm(obs,0,1)
     weight_indep_norm <- sqrt(1- (cov * cov) )
     v <- cov * u + weight_indep_norm * indep_norm
   
-    gamma <- sqrt(gamma2[g])
-    
-    x <- gamma * z + v
-    y <- beta * x + u
-    regdata <- data.frame(x,y,z)
-    regdata$dummy <- 1
-    
-    row <- 4 * (i-1) + g
-    
-    olsmodel <- lm(y ~  x ,data=regdata)
-    olsresults <- coef(summary(olsmodel))
-    resultsdata[row,1] <- olsresults[2,1]
-    resultsdata[row,2] <- olsresults[2,2]
-    resultsdata[row,3] <- ifelse(abs(olsresults[2,1])/olsresults[2,2] >= 1.96, 1, 0)
-    
-    tslsmodel <- ivreg(y ~ x | z, data = regdata )
-    tslsresults <- coef(summary(tslsmodel))
-    resultsdata[row,4] <- tslsresults[2,1]
-    resultsdata[row,5] <- tslsresults[2,2]
-    resultsdata[row,6] <- ifelse(abs(tslsresults[2,1])/tslsresults[2,2] >= 1.96, 1, 0)
-    
-    #Do F Test
-
-    instr_included <- lm(x ~ z, data = regdata)
-    F_val <- summary(instr_included)$fstatistic[1]
-
-    resultsdata[row,7] <- F_val
-    
-    resultsdata[row,8] <- gamma * gamma * obs
-    resultsdata[row,9] <- row
-
-  }
+    for(g in 1:len_gam2) {
+      gamma <- sqrt(gamma2[g])
+      
+      x <- gamma * z + v
+      y <- beta * x + u
+      regdata <- data.frame(x,y,z)
+      regdata$dummy <- 1
+      
+      row <- 4 * (i-1) + g
+      
+      olsmodel <- lm(y ~  x ,data=regdata)
+      olsresults <- coef(summary(olsmodel))
+      resultsdata[row,1] <- olsresults[2,1]
+      resultsdata[row,2] <- olsresults[2,2]
+      resultsdata[row,3] <- ifelse(abs(olsresults[2,1])/olsresults[2,2] >= 1.96, 1, 0)
+      
+      tslsmodel <- ivreg(y ~ x | z, data = regdata )
+      tslsresults <- coef(summary(tslsmodel))
+      resultsdata[row,4] <- tslsresults[2,1]
+      resultsdata[row,5] <- tslsresults[2,2]
+      resultsdata[row,6] <- ifelse(abs(tslsresults[2,1])/tslsresults[2,2] >= 1.96, 1, 0)
+      
+      #Do F Test
+  
+      instr_included <- lm(x ~ z, data = regdata)
+      F_val <- summary(instr_included)$fstatistic[1]
+  
+      resultsdata[row,7] <- F_val
+      
+      resultsdata[row,8] <- gamma * gamma * obs
+      resultsdata[row,9] <- row
+  
+    }
 }
 
-
-summary <- ddply(resultsdata, .(gamma), summarise,
-                mean_beta_OLS = mean(beta_OLS), mean_se_beta_OLS = mean(se_beta_OLS),
-                mean_beta_OLS_sig = mean(beta_OLS_sig),
-                mean_beta_2SLS = mean(beta_2SLS), mean_se_beta_2SLS = mean(se_beta_2SLS),
-                mean_beta_2SLS_sig = mean(beta_2SLS_sig), mean_F_2SLS = mean(F_2SLS),
-                
-                sd_beta_OLS = sd(beta_OLS), sd_se_beta_OLS = sd(se_beta_OLS),
-                sd_beta_OLS_sig = sd(beta_OLS_sig),
-                sd_beta_2SLS = sd(beta_2SLS), sd_se_beta_2SLS = sd(se_beta_2SLS),
-                sd_beta_2SLS_sig = sd(beta_2SLS_sig), sd_F_2SLS = sd(F_2SLS),
-                
-                quant_beta_OLS = quantile(beta_OLS,.1 ) 
-)
               
 ##Summarize Data; Then Rotate To Output
 
@@ -145,6 +135,12 @@ variables$sort_order <- ifelse(variables$variable == "F_2SLS", 7, variables$sort
 merge_sort_order <- merge(results_export, variables)
 
 resultssorted <- merge_sort_order[ order(merge_sort_order$gamma, merge_sort_order$sort_order), ]
+
+resultssorted$mean <- round(resultssorted$mean, 4)
+resultssorted$sd <- round(resultssorted$sd, 4)
+resultssorted$q10 <- round(resultssorted$q10, 4)
+resultssorted$q50 <- round(resultssorted$q50, 4)
+resultssorted$q90 <- round(resultssorted$q90, 4)
 
 outpath <- paste(export,"/R_PS5_Q2.csv", sep = "")
 write.csv(resultssorted,outpath)

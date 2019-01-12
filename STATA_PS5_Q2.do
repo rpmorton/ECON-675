@@ -1,12 +1,12 @@
-***Created by RM on 2018.11.16
+***Created by RM on 2018.11.24
 ***For ECON 665, PS 5, Q2
 *********************
 
 clear
 set more off
 
-*global sims = 5000
-global sims = 50
+global sims = 5000
+*global sims = 50
 global obs = 200
 global cov = .99
 global beta = 0
@@ -57,6 +57,8 @@ forv i = 1(1)4 {
 	
 }
 }
+
+/* Clean Results to Make Table */
 	
 use "$temp/PS5_Q2_results.dta", clear
 g gamma_actual = round(gamma^2 * $obs , .01)
@@ -95,11 +97,11 @@ foreach var of local varlist {
 		*di "g is `g' and var is `var'"
 		su `var' if gamma == `g', d
 		
-		replace mean_`var' =   `r(mean)' if gamma == `g'
-		replace sd_`var' = `r(sd)' if gamma == `g'
-		replace p10_`var' =  `r(p10)' if gamma == `g'
-		replace p50_`var' =  `r(p50)' if gamma == `g'
-		replace p90_`var' =  `r(p90)' if gamma == `g'
+		replace mean_`var' =   round(`r(mean)',.0001) if gamma == `g'
+		replace sd_`var' = round(`r(sd)',.0001) if gamma == `g'
+		replace p10_`var' =  round(`r(p10)',.0001) if gamma == `g'
+		replace p50_`var' =  round(`r(p50)',.0001) if gamma == `g'
+		replace p90_`var' =  round(`r(p90)',.0001) if gamma == `g'
 	}
 	
 }
@@ -118,8 +120,13 @@ replace param_sort = 6 if parameter == "sig_beta_2sls"
 replace param_sort = 7 if parameter == "F_2sls"
 
 sort gamma param_sort
+drop param_sort
 
+texsave using "$out/STATA_PS5_Q2.tex", replace
 
+g amper = "&"
+egen tex = concat(mean_ amper sd_ amper p10_ amper p50_ amper p90_)
+drop amper
 
-
+export excel using "$out/STATA_PS5_Q2_excel.xlsx", replace firstrow(variables)
 

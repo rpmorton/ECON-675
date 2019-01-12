@@ -260,7 +260,7 @@ logit treat_alt $speca $specb $specc
 preserve
 predict predval
 *drop if predval < .01 | predval > .99
-drop if predval < .0001 
+drop if predval < .001 
 teffects ipwra (earn78) (treat_alt $speca $specb $specc , logit) , ate iterate(50)
 restore
 
